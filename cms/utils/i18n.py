@@ -112,7 +112,8 @@ def get_public_languages(site_id=None):
     return [lang['code'] for lang in get_language_objects(site_id)
             if lang.get('public', True)]
 
-
+from functools import lru_cache
+@lru_cache(maxsize=None)
 def get_language_object(language_code, site_id=None):
     """
     :param language_code: RFC5646 language code
