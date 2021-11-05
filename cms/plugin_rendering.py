@@ -286,12 +286,6 @@ class ContentRenderer(BaseRenderer):
 
         if placeholder.pk not in self._rendered_placeholders:
             # First time this placeholder is rendered
-            if not self.toolbar._cache_disabled:
-                # The toolbar middleware needs to know if the response
-                # is to be cached.
-                # Set the _cache_disabled flag to the value of cache_placeholder
-                # only if the flag is False (meaning cache is enabled).
-                self.toolbar._cache_disabled = not use_cache
             self._rendered_placeholders[placeholder.pk] = rendered_placeholder
 
         if editable:
