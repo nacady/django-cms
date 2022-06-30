@@ -482,6 +482,7 @@ class Placeholder(models.Model):
         return min_ttl
 
     def clear_cache(self, language, site_id=None):
+        #print('---placeholder.clear_cache()')
         if not site_id and self.page:
             site_id = self.page.node.site_id
         clear_placeholder_cache(self, language, get_site_id(site_id))
@@ -495,8 +496,7 @@ class Placeholder(models.Model):
         """
         from cms.models import Page, StaticPlaceholder, Title
 
-        if clear_cache:
-            self.clear_cache(language)
+        self.clear_cache(language)
 
         # Find the attached model for this placeholder
         # This can be a static placeholder, page or none.

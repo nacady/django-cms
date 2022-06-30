@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from collections import OrderedDict
+import logging
 
 from functools import partial
 
@@ -11,6 +12,7 @@ from django.template import Context
 from django.utils.functional import cached_property
 from django.utils.module_loading import import_string
 from django.utils.safestring import mark_safe
+from django.conf import settings
 
 from cms.cache.placeholder import get_placeholder_cache, set_placeholder_cache
 from cms.toolbar.utils import (
@@ -198,6 +200,9 @@ class ContentRenderer(BaseRenderer):
         self._placeholders_are_editable = bool(self.toolbar.edit_mode_active)
 
     def placeholder_cache_is_enabled(self):
+        if hasattr(settings, 'PLACEHOLDER_CACHE_IS_ENABLED'):
+            return settings.PLACEHOLDER_CACHE_IS_ENABLED(self)
+
         if not get_cms_setting('PLACEHOLDER_CACHE'):
             return False
         if self.request.user.is_staff:
@@ -211,7 +216,7 @@ class ContentRenderer(BaseRenderer):
         language = language or self.request_language
         editable = editable and self._placeholders_are_editable
 
-        if use_cache and not editable and placeholder.cache_placeholder:
+        if use_cache and ((not editable) or getattr(settings, 'CMS_PLACEHOLDER_CACHE_EDITABLE', False)) and placeholder.cache_placeholder:
             use_cache = self.placeholder_cache_is_enabled()
         else:
             use_cache = False
@@ -223,6 +228,7 @@ class ContentRenderer(BaseRenderer):
             )
         else:
             cached_value = None
+        #logging.debug('use_cache:%s cached_value:%s' % (use_cache, bool(cached_value)))
 
         if cached_value is not None:
             # User has opted to use the cache
@@ -262,6 +268,11 @@ class ContentRenderer(BaseRenderer):
             # should be nodelist from a template
             placeholder_content = nodelist.render(context)
 
+        if editable:
+            data = self.get_editable_placeholder_context(placeholder, page=page)
+            data['content'] = placeholder_content
+            placeholder_content = self.placeholder_edit_template.format(**data)
+
         if use_cache:
             content = {
                 'content': placeholder_content,
@@ -287,11 +298,6 @@ class ContentRenderer(BaseRenderer):
         if placeholder.pk not in self._rendered_placeholders:
             # First time this placeholder is rendered
             self._rendered_placeholders[placeholder.pk] = rendered_placeholder
-
-        if editable:
-            data = self.get_editable_placeholder_context(placeholder, page=page)
-            data['content'] = placeholder_content
-            placeholder_content = self.placeholder_edit_template.format(**data)
 
         context.pop()
         return mark_safe(placeholder_content)
@@ -366,7 +372,10 @@ class ContentRenderer(BaseRenderer):
             # In edit mode, the contents of the placeholder are mixed with our
             # internal toolbar markup, so the content variable will always be True.
             # Use the rendered placeholder has_content flag instead.
-            has_content = self._rendered_placeholders[placeholder.pk].has_content
+            try:
+                has_content = self._rendered_placeholders[placeholder.pk].has_content
+            except:
+                has_content = bool(content)
         else:
             # User is not in edit mode or the placeholder doesn't exist.
             # Either way, we can trust the content variable.
@@ -382,7 +391,7 @@ class ContentRenderer(BaseRenderer):
         if self.toolbar.edit_mode_active and user.has_perm('cms.edit_static_placeholder'):
             placeholder = static_placeholder.draft
             editable = True
-            use_cache = False
+            use_cache = True
         else:
             placeholder = static_placeholder.public
             editable = False
