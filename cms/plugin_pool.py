@@ -39,8 +39,8 @@ class PluginPool(object):
             return
         from cms.cache import invalidate_cms_page_cache
 
-        if get_cms_setting("PAGE_CACHE"):
-            invalidate_cms_page_cache()
+        #if get_cms_setting("PAGE_CACHE"):
+        #    invalidate_cms_page_cache()
 
         autodiscover_modules('cms_plugins')
         self.discovered = True

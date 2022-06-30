@@ -67,7 +67,7 @@ def invalidate_cms_page_cache():
     # anyway.
     #
     version = _get_cache_version()
-    #_set_cache_version(version + 1)
+    _set_cache_version(version + 1)
 
 
 CLEAN_KEY_PATTERN = re.compile(r'[^a-zA-Z0-9_-]')
