@@ -228,16 +228,23 @@ class ContentRenderer(BaseRenderer):
             cached_value = None
         #logging.debug('use_cache:%s cached_value:%s' % (use_cache, bool(cached_value)))
 
-        if cached_value is not None:
-            # User has opted to use the cache
-            # and there is something in the cache
-            restore_sekizai_context(context, cached_value['sekizai'])
-            return mark_safe(cached_value['content'])
-
         context.push()
 
         width = width or placeholder.default_width
         template = page.get_template() if page else None
+
+        if cached_value is not None:
+            # User has opted to use the cache
+            # and there is something in the cache
+            restore_sekizai_context(context, cached_value['sekizai'])
+            if editable:
+                # create placeholder._plugins_cache to render a structure
+                self.get_plugins_to_render(
+                    placeholder=placeholder,
+                    template=template,
+                    language=language,
+                )
+            return mark_safe(cached_value['content'])
 
         if width:
             context['width'] = width
