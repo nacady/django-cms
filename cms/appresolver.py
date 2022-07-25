@@ -7,6 +7,7 @@ from django.db import OperationalError, ProgrammingError
 from django.urls import Resolver404, URLResolver, reverse
 from django.urls.resolvers import RegexPattern, URLPattern
 from django.utils.translation import get_language, override
+from django.contrib.sites.models import Site
 
 from cms.apphook_pool import apphook_pool
 from cms.models.pagemodel import Page
@@ -188,7 +189,7 @@ def get_app_patterns():
     try:
         site = get_current_site()
         return _get_app_patterns(site)
-    except (OperationalError, ProgrammingError):
+    except (OperationalError, ProgrammingError, Site.DoesNotExist):
         # ignore if DB is not ready
         # Starting with Django 1.9 this code gets called even when creating
         # or running migrations. So in many cases the DB will not be ready yet.
