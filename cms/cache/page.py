@@ -42,34 +42,54 @@ def set_page_cache(response):
     # This *must* be TZ-aware
     timestamp = now()
 
+    placeholders = toolbar.content_renderer.get_rendered_placeholders()
+    # Checks if there's a plugin using the legacy "cache = False"
+    placeholder_ttl_list = []
     vary_cache_on_set = set()
-    min_placeholder_ttl = MAX_EXPIRATION_TTL
-    ttl = min(
-        get_cms_setting('CACHE_DURATIONS')['content'],
-        min_placeholder_ttl
-    )
+    for ph in placeholders:
+        # get_cache_expiration() always returns:
+        #     EXPIRE_NOW <= int <= MAX_EXPIRATION_IN_SECONDS
+        ttl = ph.get_cache_expiration(request, timestamp)
+        vary_cache_on = ph.get_vary_cache_on(request)
 
-    if ttl > 0:
-        # Adds expiration, etc. to headers
-        patch_response_headers(response, cache_timeout=ttl)
-        patch_vary_headers(response, sorted(vary_cache_on_set))
+        placeholder_ttl_list.append(ttl)
+        if ttl and vary_cache_on:
+            # We're only interested in vary headers if they come from
+            # a cache-able placeholder.
+            vary_cache_on_set |= set(vary_cache_on)
 
-        version = _get_cache_version()
-        # We also store the absolute expiration timestamp to avoid
-        # recomputing it on cache-reads.
-        expires_datetime = timestamp + timedelta(seconds=ttl)
-        cache.set(
-            _page_cache_key(request),
-            (
-                response.content,
-                response._headers,
-                expires_datetime,
-            ),
-            ttl,
-            version=version
+    if EXPIRE_NOW not in placeholder_ttl_list:
+        if placeholder_ttl_list:
+            min_placeholder_ttl = min(x for x in placeholder_ttl_list)
+        else:
+            # Should only happen when there are no placeholders at all
+            min_placeholder_ttl = MAX_EXPIRATION_TTL
+        ttl = min(
+            get_cms_setting('CACHE_DURATIONS')['content'],
+            min_placeholder_ttl
         )
-        # See note in invalidate_cms_page_cache()
-        _set_cache_version(version)
+
+        if ttl > 0:
+            # Adds expiration, etc. to headers
+            patch_response_headers(response, cache_timeout=ttl)
+            patch_vary_headers(response, sorted(vary_cache_on_set))
+
+            version = _get_cache_version()
+            # We also store the absolute expiration timestamp to avoid
+            # recomputing it on cache-reads.
+            expires_datetime = timestamp + timedelta(seconds=ttl)
+            cache.set(
+                _page_cache_key(request),
+                (
+                    response.content,
+                    response._headers,
+                    expires_datetime,
+                ),
+                ttl,
+                version=version
+            )
+            # See note in invalidate_cms_page_cache()
+            _set_cache_version(version)
     return response
 
 
