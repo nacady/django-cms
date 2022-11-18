@@ -80,6 +80,9 @@ def set_page_cache(response):
             # recomputing it on cache-reads.
             expires_datetime = timestamp + timedelta(seconds=ttl)
             response_headers = get_response_headers(response)
+
+            if hasattr(settings, 'PAGE_CACHE_TTL'):
+                ttl = settings.PAGE_CACHE_TTL(ttl, response)
             cache.set(
                 _page_cache_key(request),
                 (
