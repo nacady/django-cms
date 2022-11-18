@@ -78,6 +78,9 @@ def set_page_cache(response):
             # We also store the absolute expiration timestamp to avoid
             # recomputing it on cache-reads.
             expires_datetime = timestamp + timedelta(seconds=ttl)
+
+            if hasattr(settings, 'PAGE_CACHE_TTL'):
+                ttl = settings.PAGE_CACHE_TTL(ttl, response)
             cache.set(
                 _page_cache_key(request),
                 (
