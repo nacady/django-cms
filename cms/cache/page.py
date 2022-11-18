@@ -35,6 +35,10 @@ def set_page_cache(response):
     toolbar = get_toolbar_from_request(request)
     is_authenticated = request.user.is_authenticated
 
+    toolbar_cache_disabled_original = toolbar.edit_mode_active or toolbar.show_toolbar
+    if hasattr(settings, 'PAGE_CACHE_DISABLED'):
+       toolbar._cache_disabled = settings.PAGE_CACHE_DISABLED(toolbar._cache_disabled, toolbar_cache_disabled_original, response)
+
     if is_authenticated or toolbar._cache_disabled or not get_cms_setting("PAGE_CACHE"):
         add_never_cache_headers(response)
         return response
